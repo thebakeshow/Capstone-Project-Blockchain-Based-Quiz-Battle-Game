@@ -6,12 +6,15 @@ contract TournamentPayout {
     uint public prizePool;
     bool public tournamentEnded;
 
-    mapping(address => uint) public participantRewards;
     address[] public participants;
+    mapping(address => bool) public isParticipant;
+    mapping(address => uint) public participantRewards;
 
-    event ParticipantAdded(address indexed participant, uint reward);
+    event ParticipantAdded(address indexed participant);
+    event WinnerDeclared(address indexed winner, uint reward);
     event PayoutDistributed(address indexed participant, uint reward);
     event TournamentEnded(uint remainingPrizePool);
+    event TournamentReset();
 
     modifier onlyOrganizer() {
         require(msg.sender == organizer, "Only the organizer can call this function.");
@@ -32,31 +35,56 @@ contract TournamentPayout {
         prizePool += msg.value;
     }
 
-    function addParticipant(address participant, uint reward) external onlyOrganizer tournamentNotEnded {
-        require(participantRewards[participant] == 0, "Participant already added.");
-        require(reward <= prizePool, "Insufficient prize pool.");
-
-        participantRewards[participant] = reward;
+    function addParticipant(address participant) external onlyOrganizer tournamentNotEnded {
+        require(!isParticipant[participant], "Participant already added.");
+        isParticipant[participant] = true;
         participants.push(participant);
-        prizePool -= reward;
+        emit ParticipantAdded(participant);
+    }
 
-        emit ParticipantAdded(participant, reward);
+    function declareWinners(address[] calldata winners, uint[] calldata rewards) external onlyOrganizer tournamentNotEnded {
+        require(winners.length == rewards.length, "Mismatched input lengths.");
+
+        uint totalRewards = 0;
+        for (uint i = 0; i < winners.length; i++) {
+            require(isParticipant[winners[i]], "Winner is not a participant.");
+            participantRewards[winners[i]] = rewards[i];
+            totalRewards += rewards[i];
+            emit WinnerDeclared(winners[i], rewards[i]);
+        }
+        require(totalRewards <= prizePool, "Not enough prize pool to cover rewards.");
+        prizePool -= totalRewards;
     }
 
     function distributePayouts() external onlyOrganizer tournamentNotEnded {
-        require(participants.length > 0, "No participants to pay.");
-
         for (uint i = 0; i < participants.length; i++) {
             address participant = participants[i];
             uint reward = participantRewards[participant];
-
             if (reward > 0) {
+                participantRewards[participant] = 0;
                 payable(participant).transfer(reward);
                 emit PayoutDistributed(participant, reward);
             }
         }
-
         tournamentEnded = true;
         emit TournamentEnded(prizePool);
+    }
+
+    function resetTournament() external onlyOrganizer {
+        require(tournamentEnded, "Tournament is not ended yet.");
+
+        for (uint i = 0; i < participants.length; i++) {
+            address participant = participants[i];
+            isParticipant[participant] = false;
+            participantRewards[participant] = 0;
+        }
+        delete participants;
+        tournamentEnded = false;
+
+        emit TournamentReset();
+    }
+
+    function getParticipants() external view returns (address[] memory) {
+        return participants;
     }
 }
