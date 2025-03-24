@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.7;
 
-contract TournamentPayout {
+import "@chainlink/contracts/src/v0.8/interfaces/AutomationCompatibleInterface.sol";
+
+contract TournamentPayout is AutomationCompatibleInterface {
     address public organizer;
     uint public prizePool;
     bool public tournamentEnded;
@@ -9,6 +11,11 @@ contract TournamentPayout {
     address[] public participants;
     mapping(address => bool) public isParticipant;
     mapping(address => uint) public participantRewards;
+    mapping(address => uint) public scores;
+    mapping(uint => bytes32) public correctAnswers;
+
+    uint public lastUpkeepTime;
+    uint public upkeepInterval = 5 minutes;
 
     event ParticipantAdded(address indexed participant);
     event WinnerDeclared(address indexed winner, uint reward);
@@ -28,6 +35,7 @@ contract TournamentPayout {
 
     constructor() {
         organizer = msg.sender;
+        lastUpkeepTime = block.timestamp;
     }
 
     function fundPrizePool() external payable onlyOrganizer {
@@ -42,18 +50,42 @@ contract TournamentPayout {
         emit ParticipantAdded(participant);
     }
 
-    function declareWinners(address[] calldata winners, uint[] calldata rewards) external onlyOrganizer tournamentNotEnded {
-        require(winners.length == rewards.length, "Mismatched input lengths.");
+    function setCorrectAnswer(uint questionId, string calldata answer) external onlyOrganizer {
+        correctAnswers[questionId] = keccak256(abi.encodePacked(answer));
+    }
 
-        uint totalRewards = 0;
-        for (uint i = 0; i < winners.length; i++) {
-            require(isParticipant[winners[i]], "Winner is not a participant.");
-            participantRewards[winners[i]] = rewards[i];
-            totalRewards += rewards[i];
-            emit WinnerDeclared(winners[i], rewards[i]);
+    function submitAnswer(uint questionId, string calldata answer) external tournamentNotEnded {
+        require(isParticipant[msg.sender], "Not a participant");
+        if (keccak256(abi.encodePacked(answer)) == correctAnswers[questionId]) {
+            scores[msg.sender] += 1;
         }
-        require(totalRewards <= prizePool, "Not enough prize pool to cover rewards.");
-        prizePool -= totalRewards;
+    }
+
+    function declareQuizWinners() public onlyOrganizer tournamentNotEnded {
+        uint highestScore = 0;
+        uint count = 0;
+
+        for (uint i = 0; i < participants.length; i++) {
+            if (scores[participants[i]] > highestScore) {
+                highestScore = scores[participants[i]];
+                count = 1;
+            } else if (scores[participants[i]] == highestScore) {
+                count++;
+            }
+        }
+
+        require(count > 0 && highestScore > 0, "No winners");
+
+        uint rewardPerWinner = prizePool / count;
+
+        for (uint i = 0; i < participants.length; i++) {
+            if (scores[participants[i]] == highestScore) {
+                participantRewards[participants[i]] = rewardPerWinner;
+                emit WinnerDeclared(participants[i], rewardPerWinner);
+            }
+        }
+
+        prizePool -= rewardPerWinner * count;
     }
 
     function distributePayouts() external onlyOrganizer tournamentNotEnded {
@@ -70,21 +102,19 @@ contract TournamentPayout {
         emit TournamentEnded(prizePool);
     }
 
-    function resetTournament() external onlyOrganizer {
-        require(tournamentEnded, "Tournament is not ended yet.");
-
-        for (uint i = 0; i < participants.length; i++) {
-            address participant = participants[i];
-            isParticipant[participant] = false;
-            participantRewards[participant] = 0;
-        }
-        delete participants;
-        tournamentEnded = false;
-
-        emit TournamentReset();
-    }
-
     function getParticipants() external view returns (address[] memory) {
         return participants;
+    }
+
+    // Chainlink Automation
+    function checkUpkeep(bytes calldata) external view override returns (bool upkeepNeeded, bytes memory) {
+        upkeepNeeded = (!tournamentEnded && (block.timestamp - lastUpkeepTime > upkeepInterval));
+    }
+
+    function performUpkeep(bytes calldata) external override {
+        if (!tournamentEnded && (block.timestamp - lastUpkeepTime > upkeepInterval)) {
+            declareQuizWinners();
+            lastUpkeepTime = block.timestamp;
+        }
     }
 }
