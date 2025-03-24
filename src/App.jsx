@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 
-const contractAddress = "0x5Eadf9cD069729b3457C67110EE1fF5Bb3EF7fc5"; // Replace with actual deployed address
+const contractAddress = "YOUR_DEPLOYED_CONTRACT_ADDRESS"; // Replace with actual deployed address
 const abi = [
   "function addParticipant(address participant) external",
   "function declareQuizWinners() external",
@@ -14,6 +14,7 @@ const abi = [
   "function scoresOf(address) view returns (uint)",
   "function manualStartQuiz() external",
   "function resetTournament() external",
+  "function endQuizEarly() external",
   "function quizStarted() view returns (bool)",
   "event WinnerDeclared(address indexed winner, uint reward)",
   "event TournamentEnded(uint)"
@@ -160,6 +161,24 @@ export default function App() {
     }
   }
 
+  async function endQuizEarly() {
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const signer = provider.getSigner();
+    const contract = new ethers.Contract(contractAddress, abi, signer);
+    try {
+      const tx = await contract.endQuizEarly();
+      setStatus("Ending quiz early...");
+      await tx.wait();
+      setStatus("✅ Quiz ended and winners declared.");
+      setQuizStarted(false);
+      setShowQuiz(false);
+      await refreshParticipants();
+      await fetchPrizePool();
+    } catch (err) {
+      setStatus("❌ Failed to end quiz early");
+    }
+  }
+
   async function resetTournament() {
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
@@ -260,6 +279,7 @@ export default function App() {
           <h3>Organizer Controls</h3>
           <button onClick={manualStartQuiz}>Start Quiz Manually</button>
           <button onClick={declareWinners}>Declare Winners</button>
+          <button onClick={endQuizEarly}>End Quiz Early</button>
           <button onClick={resetTournament}>Reset Tournament</button>
         </>
       )}
