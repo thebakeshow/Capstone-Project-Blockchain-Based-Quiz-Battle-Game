@@ -7,6 +7,7 @@ contract TournamentPayout is AutomationCompatibleInterface {
     address public organizer;
     uint public prizePool;
     bool public tournamentEnded;
+    bool public quizStarted;
 
     address[] public participants;
     mapping(address => bool) public isParticipant;
@@ -21,6 +22,7 @@ contract TournamentPayout is AutomationCompatibleInterface {
     event WinnerDeclared(address indexed winner, uint reward);
     event PayoutDistributed(address indexed participant, uint reward);
     event TournamentEnded(uint remainingPrizePool);
+    event QuizStarted();
     event TournamentReset();
 
     modifier onlyOrganizer() {
@@ -36,6 +38,10 @@ contract TournamentPayout is AutomationCompatibleInterface {
     constructor() {
         organizer = msg.sender;
         lastUpkeepTime = block.timestamp;
+
+        correctAnswers[1] = keccak256(abi.encodePacked("Manage payouts"));
+        correctAnswers[2] = keccak256(abi.encodePacked("Remix"));
+        correctAnswers[3] = keccak256(abi.encodePacked("VRF"));
     }
 
     function fundPrizePool() external payable onlyOrganizer {
@@ -43,19 +49,28 @@ contract TournamentPayout is AutomationCompatibleInterface {
         prizePool += msg.value;
     }
 
-    function addParticipant(address participant) external onlyOrganizer tournamentNotEnded {
-        require(!isParticipant[participant], "Participant already added.");
+    function addParticipant(address participant) external tournamentNotEnded {
+        require(!quizStarted, "Quiz already started");
+        require(!isParticipant[participant], "Already joined");
         isParticipant[participant] = true;
         participants.push(participant);
         emit ParticipantAdded(participant);
+
+        if (participants.length == 4) {
+            quizStarted = true;
+            emit QuizStarted();
+        }
     }
 
-    function setCorrectAnswer(uint questionId, string calldata answer) external onlyOrganizer {
-        correctAnswers[questionId] = keccak256(abi.encodePacked(answer));
+    function manualStartQuiz() external onlyOrganizer tournamentNotEnded {
+        require(!quizStarted, "Already started");
+        quizStarted = true;
+        emit QuizStarted();
     }
 
-    function submitAnswer(uint questionId, string calldata answer) external tournamentNotEnded {
+    function submitAnswer(uint questionId, string calldata answer) external {
         require(isParticipant[msg.sender], "Not a participant");
+        require(quizStarted, "Quiz not started yet");
         if (keccak256(abi.encodePacked(answer)) == correctAnswers[questionId]) {
             scores[msg.sender] += 1;
         }
@@ -81,40 +96,49 @@ contract TournamentPayout is AutomationCompatibleInterface {
         for (uint i = 0; i < participants.length; i++) {
             if (scores[participants[i]] == highestScore) {
                 participantRewards[participants[i]] = rewardPerWinner;
+                payable(participants[i]).transfer(rewardPerWinner);
                 emit WinnerDeclared(participants[i], rewardPerWinner);
+                emit PayoutDistributed(participants[i], rewardPerWinner);
             }
         }
 
-        prizePool -= rewardPerWinner * count;
-    }
-
-    function distributePayouts() external onlyOrganizer tournamentNotEnded {
-        for (uint i = 0; i < participants.length; i++) {
-            address participant = participants[i];
-            uint reward = participantRewards[participant];
-            if (reward > 0) {
-                participantRewards[participant] = 0;
-                payable(participant).transfer(reward);
-                emit PayoutDistributed(participant, reward);
-            }
-        }
+        prizePool = 0;
         tournamentEnded = true;
         emit TournamentEnded(prizePool);
+    }
+
+    function resetTournament() external onlyOrganizer {
+        for (uint i = 0; i < participants.length; i++) {
+            isParticipant[participants[i]] = false;
+            scores[participants[i]] = 0;
+            participantRewards[participants[i]] = 0;
+        }
+
+        delete participants;
+        prizePool = 0;
+        quizStarted = false;
+        tournamentEnded = false;
+
+        emit TournamentReset();
     }
 
     function getParticipants() external view returns (address[] memory) {
         return participants;
     }
 
-    function checkUpkeep(bytes calldata) external view override returns (bool upkeepNeeded, bytes memory performData) {
-        bool hasExactParticipants = participants.length == 4;
-        bool timePassed = (block.timestamp - lastUpkeepTime > upkeepInterval);
-        upkeepNeeded = (!tournamentEnded && hasExactParticipants && timePassed);
-        performData = bytes("");
+    function scoresOf(address player) external view returns (uint) {
+        return scores[player];
+    }
+
+    // Chainlink Automation
+    function checkUpkeep(bytes calldata) external view override returns (bool upkeepNeeded, bytes memory) {
+        bool timePassed = block.timestamp - lastUpkeepTime > upkeepInterval;
+        upkeepNeeded = (!tournamentEnded && quizStarted && timePassed);
+        return (upkeepNeeded, "");
     }
 
     function performUpkeep(bytes calldata) external override {
-        if (!tournamentEnded && (block.timestamp - lastUpkeepTime > upkeepInterval) && participants.length == 4) {
+        if (!tournamentEnded && quizStarted && (block.timestamp - lastUpkeepTime > upkeepInterval)) {
             declareQuizWinners();
             lastUpkeepTime = block.timestamp;
         }
