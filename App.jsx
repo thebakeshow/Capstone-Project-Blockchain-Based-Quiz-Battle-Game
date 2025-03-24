@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 
-const contractAddress = "<YOUR_DEPLOYED_CONTRACT_ADDRESS>"; // replace this with your deployed contract address
+const contractAddress = "0x289EBb0ba8B6937dD0AAC9E6dC33402E053A1C81"; // replace this with your deployed contract address
 const abi = [
   "function addParticipant(address participant) external",
   "function declareWinners(address[] calldata winners, uint[] calldata rewards) external",
