@@ -107,9 +107,11 @@ contract TournamentPayout is AutomationCompatibleInterface {
     }
 
     // Chainlink Automation
-    function checkUpkeep(bytes calldata) external view override returns (bool upkeepNeeded, bytes memory) {
-        upkeepNeeded = (!tournamentEnded && (block.timestamp - lastUpkeepTime > upkeepInterval));
+    function checkUpkeep(bytes calldata) external view override returns (bool upkeepNeeded, bytes memory performData) {
+    upkeepNeeded = (!tournamentEnded && (block.timestamp - lastUpkeepTime > upkeepInterval));
+    performData = bytes("");
     }
+
 
     function performUpkeep(bytes calldata) external override {
         if (!tournamentEnded && (block.timestamp - lastUpkeepTime > upkeepInterval)) {
