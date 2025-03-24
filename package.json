@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@coinbase/onchainkit": "^0.37.8",
-    "ethers": "^6.13.5",
+    "ethers": "^5.8.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "viem": "^2.23.11",
