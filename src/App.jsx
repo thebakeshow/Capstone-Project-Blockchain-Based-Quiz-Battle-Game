@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 
-const contractAddress = "0x0B2135EE4b0b299042b596A9077e4f66D0b37Eb5"; // Replace with actual deployed address
+const contractAddress = "0x857830f8A2CA76c87A0D9A01303e97574A9308ab"; // Replace with actual deployed address
 const abi = [
   "function addParticipant(address participant) external",
   "function declareQuizWinners() external",
