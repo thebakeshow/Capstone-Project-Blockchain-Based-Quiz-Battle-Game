@@ -68,9 +68,15 @@ contract TournamentPayout is AutomationCompatibleInterface {
         emit QuizStarted();
     }
 
+    function endQuizEarly() external onlyOrganizer tournamentNotEnded {
+        require(quizStarted, "Quiz not started yet");
+        declareQuizWinners();
+        lastUpkeepTime = block.timestamp;
+    }
+
     function submitAnswer(uint questionId, string calldata answer) external {
         require(isParticipant[msg.sender], "Not a participant");
-        require(quizStarted, "Quiz not started yet");
+        require(quizStarted, "Quiz not started");
         if (keccak256(abi.encodePacked(answer)) == correctAnswers[questionId]) {
             scores[msg.sender] += 1;
         }
@@ -130,7 +136,6 @@ contract TournamentPayout is AutomationCompatibleInterface {
         return scores[player];
     }
 
-    // Chainlink Automation
     function checkUpkeep(bytes calldata) external view override returns (bool upkeepNeeded, bytes memory) {
         bool timePassed = block.timestamp - lastUpkeepTime > upkeepInterval;
         upkeepNeeded = (!tournamentEnded && quizStarted && timePassed);
