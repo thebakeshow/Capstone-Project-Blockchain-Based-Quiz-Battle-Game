@@ -37,6 +37,7 @@ export default function App() {
   const [prizePool, setPrizePool] = useState("0");
   const [showQuiz, setShowQuiz] = useState(true);
   const [winners, setWinners] = useState([]);
+  const [leaderboard, setLeaderboard] = useState([]);
 
   const organizerAddress = "0xca7490a6ea2d9ba9d8819a18ad37744c7d680f1e";
 
@@ -45,6 +46,13 @@ export default function App() {
     window.ethereum?.on("accountsChanged", () => {
       init();
     });
+
+    const interval = setInterval(() => {
+      refreshParticipants();
+      updateLeaderboard();
+    }, 10000); // refresh leaderboard every 10 seconds
+
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -76,7 +84,7 @@ export default function App() {
     await fetchScore(user);
     await fetchQuizStarted();
     await fetchPrizePool();
-    await fetchWinners();
+    await updateLeaderboard();
   }
 
   async function fetchQuizStarted() {
@@ -84,36 +92,7 @@ export default function App() {
     const contract = new ethers.Contract(contractAddress, abi, provider);
     const started = await contract.quizStarted();
     setQuizStarted(started);
-    if (!started) {
-      setShowQuiz(true);
-    }
-  }
-
-  async function fetchWinners() {
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const contract = new ethers.Contract(contractAddress, abi, provider);
-
-    try {
-      const list = await contract.getParticipants();
-      const results = [];
-
-      for (let addr of list) {
-        const reward = await contract.participantRewards(addr);
-        if (reward.gt(0)) {
-          results.push({
-            address: addr,
-            reward: ethers.utils.formatEther(reward)
-          });
-        }
-      }
-
-      if (results.length > 0) {
-        setWinners(results);
-        setShowQuiz(false);
-      }
-    } catch (err) {
-      console.error("Could not fetch winners");
-    }
+    if (!started) setShowQuiz(true);
   }
 
   async function register(addr) {
@@ -132,6 +111,23 @@ export default function App() {
     const contract = new ethers.Contract(contractAddress, abi, provider);
     const list = await contract.getParticipants();
     setParticipants(list);
+  }
+
+  async function updateLeaderboard() {
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const contract = new ethers.Contract(contractAddress, abi, provider);
+    try {
+      const list = await contract.getParticipants();
+      const board = [];
+      for (const addr of list) {
+        const sc = await contract.scoresOf(addr);
+        board.push({ address: addr, score: Number(sc.toString()) });
+      }
+      const sorted = board.sort((a, b) => b.score - a.score);
+      setLeaderboard(sorted);
+    } catch (err) {
+      console.error("Failed to update leaderboard:", err);
+    }
   }
 
   async function fetchScore(addr) {
@@ -160,6 +156,7 @@ export default function App() {
       await tx.wait();
       setAnswered([...answered, qid]);
       setStatus(`✅ Answer submitted for Q${qid}`);
+      await updateLeaderboard();
     } catch (err) {
       setStatus("❌ Error submitting answer");
     }
@@ -196,6 +193,7 @@ export default function App() {
       setShowQuiz(true);
       await refreshParticipants();
       await fetchPrizePool();
+      await updateLeaderboard();
     } catch (err) {
       setStatus("❌ Failed to reset");
     }
@@ -225,15 +223,20 @@ export default function App() {
   return (
     <div style={{ padding: '2rem', background: '#111', color: '#fff', minHeight: '100vh', fontFamily: 'sans-serif' }}>
       <h1>Quiz Battle Game</h1>
-
       <p>🦊 Wallet: {account ? `${account.slice(0, 6)}...${account.slice(-4)}` : 'Not connected'}</p>
       <p>🏆 Prize Pool: {prizePool} ETH</p>
       <p>👥 {participants.length}/4 Participants</p>
-      <ul>
-        {participants.map((p, i) => (
-          <li key={i}>{p.slice(0, 6)}...{p.slice(-4)}</li>
-        ))}
-      </ul>
+
+      <h3 style={{ marginTop: '1rem' }}>📊 Live Leaderboard</h3>
+      {leaderboard.length === 0 ? (
+        <p>No scores yet.</p>
+      ) : (
+        <ol>
+          {leaderboard.map((p, i) => (
+            <li key={i}>{p.address.slice(0, 6)}...{p.address.slice(-4)} — 🧠 {p.score} pts</li>
+          ))}
+        </ol>
+      )}
 
       {!quizStarted && participants.length === 4 && countdown > 0 && (
         <h2>⏳ Quiz starts in: {countdown}s</h2>
@@ -288,7 +291,11 @@ export default function App() {
         <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: '#222', borderRadius: '6px' }}>
           <p>Status: {status}</p>
           {txHash && (
-            <p>Tx: <a href={`https://sepolia.basescan.org/tx/${txHash}`} target="_blank" rel="noreferrer" style={{ color: '#4ade80' }}>{txHash.slice(0, 10)}...</a></p>
+            <p>
+              Tx: <a href={`https://sepolia.basescan.org/tx/${txHash}`} target="_blank" rel="noreferrer" style={{ color: '#4ade80' }}>
+                {txHash.slice(0, 10)}...
+              </a>
+            </p>
           )}
         </div>
       )}
