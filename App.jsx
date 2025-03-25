@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 
-const contractAddress = "0x5Eadf9cD069729b3457C67110EE1fF5Bb3EF7fc5"; // Replace with actual deployed address
+const contractAddress = "0x5Eadf9cD069729b3457C67110EE1fF5Bb3EF7fc5"; // ✅ Replace if needed
 const abi = [
   "function addParticipant(address participant) external",
   "function declareQuizWinners() external",
@@ -41,34 +41,10 @@ export default function App() {
   const organizerAddress = "0xca7490a6ea2d9ba9d8819a18ad37744c7d680f1e";
 
   useEffect(() => {
-    async function init() {
-      if (!window.ethereum) return alert("Please install MetaMask");
-
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const accounts = await provider.send("eth_requestAccounts", []);
-      const user = accounts[0];
-      setAccount(user);
-      await register(user);
-      await refreshParticipants();
-      await fetchScore(user);
-      await fetchQuizStarted();
-      await fetchPrizePool();
-
-      window.ethereum.on("accountsChanged", async (accs) => {
-        if (accs.length > 0) {
-          setAccount(accs[0]);
-          await register(accs[0]);
-          await refreshParticipants();
-          await fetchScore(accs[0]);
-          await fetchQuizStarted();
-          await fetchPrizePool();
-        } else {
-          setAccount(null);
-        }
-      });
-    }
-
     init();
+    window.ethereum?.on("accountsChanged", () => {
+      init();
+    });
   }, []);
 
   useEffect(() => {
@@ -89,11 +65,55 @@ export default function App() {
     }
   }, [countdown]);
 
+  async function init() {
+    if (!window.ethereum) return alert("Please install MetaMask");
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const accounts = await provider.send("eth_requestAccounts", []);
+    const user = accounts[0];
+    setAccount(user);
+    await register(user);
+    await refreshParticipants();
+    await fetchScore(user);
+    await fetchQuizStarted();
+    await fetchPrizePool();
+    await fetchWinners();
+  }
+
   async function fetchQuizStarted() {
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const contract = new ethers.Contract(contractAddress, abi, provider);
     const started = await contract.quizStarted();
     setQuizStarted(started);
+    if (!started) {
+      setShowQuiz(true);
+    }
+  }
+
+  async function fetchWinners() {
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const contract = new ethers.Contract(contractAddress, abi, provider);
+
+    try {
+      const list = await contract.getParticipants();
+      const results = [];
+
+      for (let addr of list) {
+        const reward = await contract.participantRewards(addr);
+        if (reward.gt(0)) {
+          results.push({
+            address: addr,
+            reward: ethers.utils.formatEther(reward)
+          });
+        }
+      }
+
+      if (results.length > 0) {
+        setWinners(results);
+        setShowQuiz(false);
+      }
+    } catch (err) {
+      console.error("Could not fetch winners");
+    }
   }
 
   async function register(addr) {
