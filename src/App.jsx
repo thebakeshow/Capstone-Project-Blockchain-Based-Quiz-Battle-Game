@@ -37,8 +37,8 @@ export default function App() {
     },
     {
       id: 3,
-      question: "What tool automates winner declaration and payouts?",
-      choices: ["Remix", "Hardhat", "Chainlink Upkeep"],
+      question: "What framework is used to build the front end?",
+      choices: ["Next.js", "React + Vite", "Angular"],
     },
     {
       id: 4,
@@ -51,8 +51,12 @@ export default function App() {
     },
     {
       id: 5,
-      question: "Which Chainlink feature is planned for future question randomization?",
-      choices: ["Functions", "Data Feeds", "VRF"],
+      question: "What problem does this project aim to solve?",
+      choices: [
+        "Faster NFT minting",
+        "Decentralized tournament payouts",
+        "Better gas fees for token swaps",
+      ],
     },
   ]);
 
