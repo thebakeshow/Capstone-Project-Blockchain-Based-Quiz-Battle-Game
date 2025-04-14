@@ -39,9 +39,11 @@ contract TournamentPayout is AutomationCompatibleInterface {
         organizer = msg.sender;
         lastUpkeepTime = block.timestamp;
 
-        correctAnswers[1] = keccak256(abi.encodePacked("Manage payouts"));
-        correctAnswers[2] = keccak256(abi.encodePacked("Remix"));
-        correctAnswers[3] = keccak256(abi.encodePacked("VRF"));
+        correctAnswers[1] = keccak256(abi.encodePacked("Transparent + Fast + Publicly Verifiable"));
+        correctAnswers[2] = keccak256(abi.encodePacked("Base Sepolia"));
+        correctAnswers[3] = keccak256(abi.encodePacked("Chainlink Upkeep"));
+        correctAnswers[4] = keccak256(abi.encodePacked("Immutable smart contract"));
+        correctAnswers[5] = keccak256(abi.encodePacked("VRF"));
     }
 
     function fundPrizePool() external payable onlyOrganizer {
