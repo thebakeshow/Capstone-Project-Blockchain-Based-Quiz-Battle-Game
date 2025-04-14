@@ -60,7 +60,6 @@ export default function App() {
     },
   ]);
 
-
   const [account, setAccount] = useState(null);
   const [participants, setParticipants] = useState([]);
   const [score, setScore] = useState(null);
@@ -68,7 +67,6 @@ export default function App() {
   const [txHash, setTxHash] = useState("");
   const [answered, setAnswered] = useState([]);
   const [quizStarted, setQuizStarted] = useState(false);
-  const [countdown, setCountdown] = useState(0);
   const [prizePool, setPrizePool] = useState("0");
   const [showQuiz, setShowQuiz] = useState(true);
   const [winners, setWinners] = useState([]);
@@ -90,31 +88,16 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    if (participants.length === 4 && !quizStarted) {
-      let time = 5;
-      setCountdown(time);
-      const timer = setInterval(() => {
-        time -= 1;
-        setCountdown(time);
-        if (time === 0) clearInterval(timer);
-      }, 1000);
-    }
-  }, [participants, quizStarted]);
-
-  useEffect(() => {
-    if (countdown === 0 && participants.length === 4 && !quizStarted) {
-      fetchQuizStarted();
-    }
-  }, [countdown]);
-
   async function init() {
     if (!window.ethereum) return alert("Please install MetaMask");
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const accounts = await provider.send("eth_requestAccounts", []);
     const user = accounts[0];
     setAccount(user);
-    await register(user);
+    // Only register as a participant if the connected address is not the organizer
+    if(user.toLowerCase() !== organizerAddress.toLowerCase()){
+      await register(user);
+    }
     await refreshParticipants();
     await fetchScore(user);
     await fetchQuizStarted();
@@ -203,12 +186,12 @@ export default function App() {
     const contract = new ethers.Contract(contractAddress, abi, signer);
     try {
       const tx = await contract.manualStartQuiz();
-      setStatus("Starting quiz...");
+      setStatus("Starting tournament...");
       await tx.wait();
-      setStatus("✅ Quiz started manually");
+      setStatus("✅ Tournament started manually");
       setQuizStarted(true);
     } catch (err) {
-      setStatus("❌ Failed to start quiz");
+      setStatus("❌ Failed to start tournament");
     }
   }
 
@@ -260,7 +243,7 @@ export default function App() {
       <h1>Quiz Battle Game</h1>
       <p>🦊 Wallet: {account ? `${account.slice(0, 6)}...${account.slice(-4)}` : 'Not connected'}</p>
       <p>🏆 Prize Pool: {prizePool} ETH</p>
-      <p>👥 {participants.length}/4 Participants</p>
+      <p>👥 {participants.length} Participants</p>
 
       <h3 style={{ marginTop: '1rem' }}>📊 Live Leaderboard</h3>
       {leaderboard.length === 0 ? (
@@ -271,10 +254,6 @@ export default function App() {
             <li key={i}>{p.address.slice(0, 6)}...{p.address.slice(-4)} — 🧠 {p.score} pts</li>
           ))}
         </ol>
-      )}
-
-      {!quizStarted && participants.length === 4 && countdown > 0 && (
-        <h2>⏳ Quiz starts in: {countdown}s</h2>
       )}
 
       {showQuiz && quizStarted && (
@@ -316,7 +295,7 @@ export default function App() {
       {account?.toLowerCase() === organizerAddress.toLowerCase() && (
         <>
           <h3>Organizer Controls</h3>
-          <button onClick={manualStartQuiz}>Start Quiz Manually</button>
+          <button onClick={manualStartQuiz}>Start Tournament</button>
           <button onClick={declareWinners}>Declare Winners</button>
           <button onClick={resetTournament}>Reset Tournament</button>
         </>
