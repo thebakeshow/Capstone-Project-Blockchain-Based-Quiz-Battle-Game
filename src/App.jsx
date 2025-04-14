@@ -105,7 +105,7 @@ export default function App() {
   };
 
   const init = async (userAddress) => {
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const provider = new ethers.providers.Web3Provider(getMetaMaskProvider());
     const user = userAddress;
     setAccount(user);
     if(user.toLowerCase() !== organizerAddress.toLowerCase()){
@@ -120,9 +120,10 @@ export default function App() {
 
   useEffect(() => {
     const checkConnection = async () => {
-      if (window.ethereum) {
+      const provider = getMetaMaskProvider();
+      if (provider) {
         try {
-          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+          const accounts = await provider.request({ method: 'eth_accounts' });
           if (accounts.length > 0) {
             await init(accounts[0]);
           }
@@ -133,7 +134,7 @@ export default function App() {
     };
     checkConnection();
 
-    window.ethereum?.on("accountsChanged", () => {
+    getMetaMaskProvider()?.on("accountsChanged", () => {
       checkConnection();
     });
 
@@ -146,7 +147,7 @@ export default function App() {
   }, []);
 
   async function fetchQuizStarted() {
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const provider = new ethers.providers.Web3Provider(getMetaMaskProvider());
     const contract = new ethers.Contract(contractAddress, abi, provider);
     const started = await contract.quizStarted();
     setQuizStarted(started);
@@ -154,7 +155,7 @@ export default function App() {
   }
 
   async function register(addr) {
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const provider = new ethers.providers.Web3Provider(getMetaMaskProvider());
     const signer = provider.getSigner();
     const contract = new ethers.Contract(contractAddress, abi, signer);
     const list = await contract.getParticipants();
@@ -165,14 +166,14 @@ export default function App() {
   }
 
   async function refreshParticipants() {
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const provider = new ethers.providers.Web3Provider(getMetaMaskProvider());
     const contract = new ethers.Contract(contractAddress, abi, provider);
     const list = await contract.getParticipants();
     setParticipants(list);
   }
 
   async function updateLeaderboard() {
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const provider = new ethers.providers.Web3Provider(getMetaMaskProvider());
     const contract = new ethers.Contract(contractAddress, abi, provider);
     try {
       const list = await contract.getParticipants();
@@ -189,14 +190,14 @@ export default function App() {
   }
 
   async function fetchScore(addr) {
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const provider = new ethers.providers.Web3Provider(getMetaMaskProvider());
     const contract = new ethers.Contract(contractAddress, abi, provider);
     const result = await contract.scoresOf(addr);
     setScore(result.toString());
   }
 
   async function fetchPrizePool() {
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const provider = new ethers.providers.Web3Provider(getMetaMaskProvider());
     const contract = new ethers.Contract(contractAddress, abi, provider);
     const pool = await contract.prizePool();
     setPrizePool(ethers.utils.formatEther(pool));
@@ -204,7 +205,7 @@ export default function App() {
 
   async function submitAnswer(qid, ans) {
     if (answered.includes(qid)) return;
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const provider = new ethers.providers.Web3Provider(getMetaMaskProvider());
     const signer = provider.getSigner();
     const contract = new ethers.Contract(contractAddress, abi, signer);
     try {
@@ -221,7 +222,7 @@ export default function App() {
   }
 
   async function manualStartQuiz() {
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const provider = new ethers.providers.Web3Provider(getMetaMaskProvider());
     const signer = provider.getSigner();
     const contract = new ethers.Contract(contractAddress, abi, signer);
     try {
@@ -236,7 +237,7 @@ export default function App() {
   }
 
   async function resetTournament() {
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const provider = new ethers.providers.Web3Provider(getMetaMaskProvider());
     const signer = provider.getSigner();
     const contract = new ethers.Contract(contractAddress, abi, signer);
     try {
@@ -258,7 +259,7 @@ export default function App() {
   }
 
   async function declareWinners() {
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const provider = new ethers.providers.Web3Provider(getMetaMaskProvider());
     const signer = provider.getSigner();
     const contract = new ethers.Contract(contractAddress, abi, signer);
     try {
