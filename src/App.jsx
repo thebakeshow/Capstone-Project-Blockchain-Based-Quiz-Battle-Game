@@ -158,9 +158,8 @@ export default function App() {
     };
   }, []);
 
-  return ( => {
-      clearInterval(interval);
-      clearInterval(quizInterval);
+  // Removed invalid nested return
+
     };
   }, []);
 
