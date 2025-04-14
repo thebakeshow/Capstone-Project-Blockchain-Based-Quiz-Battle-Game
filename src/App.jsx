@@ -73,6 +73,7 @@ export default function App() {
   const [winners, setWinners] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [tournamentEnded, setTournamentEnded] = useState(false);
+  const [showWinnersScreen, setShowWinnersScreen] = useState(false);
 
   const organizerAddress = "0xca7490a6ea2d9ba9d8819a18ad37744c7d680f1e";
 
@@ -159,6 +160,9 @@ export default function App() {
     setQuizStarted(started);
     setTournamentEnded(ended);
     setShowQuiz(started && !ended);
+    if (ended && winners.length > 0) {
+      setShowWinnersScreen(true);
+    }
   }
 
   async function register(addr) {
@@ -257,6 +261,7 @@ export default function App() {
       setScore(null);
       setWinners([]);
       setShowQuiz(false);
+      setShowWinnersScreen(false);
       setTournamentEnded(false);
       await refreshParticipants();
       await fetchPrizePool();
@@ -281,6 +286,7 @@ export default function App() {
       }));
       setWinners(result);
       setShowQuiz(false);
+      setShowWinnersScreen(true);
     } catch (err) {
       setStatus("❌ Error declaring winners");
     }
@@ -330,7 +336,7 @@ export default function App() {
         </>
       )}
 
-      {tournamentEnded && winners.length > 0 && (
+      {showWinnersScreen && tournamentEnded && winners.length > 0 && (
         <>
           <h2>🏁 Quiz Over – Winners</h2>
           <ul>
