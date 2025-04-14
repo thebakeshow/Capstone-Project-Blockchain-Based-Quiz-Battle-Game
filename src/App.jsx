@@ -15,6 +15,7 @@ const abi = [
   "function manualStartQuiz() external",
   "function resetTournament() external",
   "function quizStarted() view returns (bool)",
+  "function tournamentEnded() view returns (bool)",
   "event WinnerDeclared(address indexed winner, uint reward)",
   "event TournamentEnded(uint)"
 ];
@@ -137,11 +138,11 @@ export default function App() {
 
     const quizInterval = setInterval(() => {
       fetchQuizStarted();
-    }, 5000);
+    }, 3000);
 
     const prizeInterval = setInterval(() => {
       fetchPrizePool();
-    }, 7000);
+    }, 5000);
 
     return () => {
       clearInterval(interval);
@@ -157,7 +158,7 @@ export default function App() {
     const ended = await contract.tournamentEnded();
     setQuizStarted(started);
     setTournamentEnded(ended);
-    setShowQuiz(started);
+    setShowQuiz(started && !ended);
   }
 
   async function register(addr) {
