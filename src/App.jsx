@@ -295,7 +295,7 @@ export default function App() {
       clearInterval(quizInterval);
       clearInterval(prizeInterval);
     };
-  }, []);
+  } []);
 
   return (
     <div style={{ padding: '2rem', background: '#111', color: '#fff', minHeight: '100vh', fontFamily: 'sans-serif' }}>
