@@ -68,7 +68,7 @@ export default function App() {
   const [answered, setAnswered] = useState([]);
   const [quizStarted, setQuizStarted] = useState(false);
   const [prizePool, setPrizePool] = useState("0");
-  const [showQuiz, setShowQuiz] = useState(true);
+  const [showQuiz, setShowQuiz] = useState(false);
   const [winners, setWinners] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
 
@@ -82,20 +82,14 @@ export default function App() {
   };
 
   const connectWallet = async () => {
-    console.log("🔌 Connect Wallet button clicked");
-
     const provider = getMetaMaskProvider();
     if (!provider) {
       alert("❌ MetaMask not detected. Please install or enable MetaMask and try again.");
-      console.error("No MetaMask provider found in window.ethereum");
       return;
     }
-
     try {
-      console.log("🦊 Forcing MetaMask connection...");
       const accounts = await provider.request({ method: 'eth_requestAccounts' });
       const user = accounts[0];
-      console.log("✅ Connected:", user);
       setAccount(user);
       await init(user);
     } catch (err) {
@@ -106,13 +100,12 @@ export default function App() {
 
   const init = async (userAddress) => {
     const provider = new ethers.providers.Web3Provider(getMetaMaskProvider());
-    const user = userAddress;
-    setAccount(user);
-    if(user.toLowerCase() !== organizerAddress.toLowerCase()){
-      await register(user);
+    setAccount(userAddress);
+    if (userAddress.toLowerCase() !== organizerAddress.toLowerCase()) {
+      await register(userAddress);
     }
     await refreshParticipants();
-    await fetchScore(user);
+    await fetchScore(userAddress);
     await fetchQuizStarted();
     await fetchPrizePool();
     await updateLeaderboard();
@@ -132,11 +125,9 @@ export default function App() {
         }
       }
     };
-    checkConnection();
 
-    getMetaMaskProvider()?.on("accountsChanged", () => {
-      checkConnection();
-    });
+    checkConnection();
+    getMetaMaskProvider()?.on("accountsChanged", checkConnection);
 
     const interval = setInterval(() => {
       refreshParticipants();
@@ -158,18 +149,12 @@ export default function App() {
     };
   }, []);
 
-  // Removed invalid nested return
-
-    };
-  }, []);
-
-    async function fetchQuizStarted() {
+  async function fetchQuizStarted() {
     const provider = new ethers.providers.Web3Provider(getMetaMaskProvider());
     const contract = new ethers.Contract(contractAddress, abi, provider);
     const started = await contract.quizStarted();
     setQuizStarted(started);
-    if (started) setShowQuiz(true);
-    else setShowQuiz(false);
+    setShowQuiz(started);
   }
 
   async function register(addr) {
@@ -249,6 +234,7 @@ export default function App() {
       await tx.wait();
       setStatus("✅ Tournament started manually");
       setQuizStarted(true);
+      setShowQuiz(true);
     } catch (err) {
       setStatus("❌ Failed to start tournament");
     }
@@ -267,7 +253,7 @@ export default function App() {
       setAnswered([]);
       setScore(null);
       setWinners([]);
-      setShowQuiz(true);
+      setShowQuiz(false);
       await refreshParticipants();
       await fetchPrizePool();
       await updateLeaderboard();
@@ -296,17 +282,6 @@ export default function App() {
       setStatus("❌ Error declaring winners");
     }
   }
-
-      const prizeInterval = setInterval(() => {
-      fetchPrizePool();
-    }, 7000); // every 7 seconds
-
-    return () => {
-      clearInterval(interval);
-      clearInterval(quizInterval);
-      clearInterval(prizeInterval);
-    };
-  }, []);
 
   return (
     <div style={{ padding: '2rem', background: '#111', color: '#fff', minHeight: '100vh', fontFamily: 'sans-serif' }}>
