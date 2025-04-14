@@ -74,19 +74,33 @@ export default function App() {
 
   const organizerAddress = "0xca7490a6ea2d9ba9d8819a18ad37744c7d680f1e";
 
+  const getMetaMaskProvider = () => {
+    if (window.ethereum?.providers) {
+      return window.ethereum.providers.find((p) => p.isMetaMask);
+    }
+    return window.ethereum?.isMetaMask ? window.ethereum : null;
+  };
+
   const connectWallet = async () => {
-    if (!window.ethereum) {
-      alert("MetaMask is not installed. Please install MetaMask to connect.");
+    console.log("🔌 Connect Wallet button clicked");
+
+    const provider = getMetaMaskProvider();
+    if (!provider) {
+      alert("❌ MetaMask not detected. Please install or enable MetaMask and try again.");
+      console.error("No MetaMask provider found in window.ethereum");
       return;
     }
+
     try {
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const accounts = await provider.send("eth_requestAccounts", []);
+      console.log("🦊 Forcing MetaMask connection...");
+      const accounts = await provider.request({ method: 'eth_requestAccounts' });
       const user = accounts[0];
+      console.log("✅ Connected:", user);
       setAccount(user);
       await init(user);
-    } catch (error) {
-      console.error("Connection request failed:", error);
+    } catch (err) {
+      console.error("❌ Connection error:", err);
+      alert("MetaMask connection failed. Please try again.");
     }
   };
 
@@ -272,7 +286,7 @@ export default function App() {
         <button onClick={connectWallet} style={{ marginBottom: '1rem' }}>🔐 Connect Wallet</button>
       )}
 
-      <p>🦊 Wallet: {account ? `${account.slice(0, 6)}...${account.slice(-4)}` : 'Not connected'}</p>
+      <p>🦉 Wallet: {account ? `${account.slice(0, 6)}...${account.slice(-4)}` : 'Not connected'}</p>
       <p>🏆 Prize Pool: {prizePool} ETH</p>
       <p>👥 {participants.length} Participants</p>
 
