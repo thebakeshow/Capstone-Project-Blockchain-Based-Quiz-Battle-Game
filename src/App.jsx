@@ -147,7 +147,18 @@ export default function App() {
       fetchQuizStarted();
     }, 5000);
 
+    const prizeInterval = setInterval(() => {
+      fetchPrizePool();
+    }, 7000);
+
     return () => {
+      clearInterval(interval);
+      clearInterval(quizInterval);
+      clearInterval(prizeInterval);
+    };
+  }, []);
+
+  return ( => {
       clearInterval(interval);
       clearInterval(quizInterval);
     };
@@ -158,7 +169,8 @@ export default function App() {
     const contract = new ethers.Contract(contractAddress, abi, provider);
     const started = await contract.quizStarted();
     setQuizStarted(started);
-    if (!started) setShowQuiz(true);
+    if (started) setShowQuiz(true);
+    else setShowQuiz(false);
   }
 
   async function register(addr) {
@@ -295,7 +307,7 @@ export default function App() {
       clearInterval(quizInterval);
       clearInterval(prizeInterval);
     };
-  } []);
+  }, []);
 
   return (
     <div style={{ padding: '2rem', background: '#111', color: '#fff', minHeight: '100vh', fontFamily: 'sans-serif' }}>
