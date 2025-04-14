@@ -38,13 +38,14 @@ contract TournamentPayout is AutomationCompatibleInterface {
     constructor() {
         organizer = msg.sender;
         lastUpkeepTime = block.timestamp;
-
+    
         correctAnswers[1] = keccak256(abi.encodePacked("Transparent + Fast + Publicly Verifiable"));
         correctAnswers[2] = keccak256(abi.encodePacked("Base Sepolia"));
-        correctAnswers[3] = keccak256(abi.encodePacked("Chainlink Upkeep"));
+        correctAnswers[3] = keccak256(abi.encodePacked("React + Vite"));
         correctAnswers[4] = keccak256(abi.encodePacked("Immutable smart contract"));
-        correctAnswers[5] = keccak256(abi.encodePacked("VRF"));
+        correctAnswers[5] = keccak256(abi.encodePacked("Decentralized tournament payouts"));
     }
+
 
     function fundPrizePool() external payable onlyOrganizer {
         require(msg.value > 0, "Must send Ether to fund the prize pool.");
@@ -52,16 +53,12 @@ contract TournamentPayout is AutomationCompatibleInterface {
     }
 
     function addParticipant(address participant) external tournamentNotEnded {
-        require(!quizStarted, "Quiz already started");
+        require(!quizStarted, "Tournament already started");
+        require(participant != organizer, "Organizer cannot join as participant");
         require(!isParticipant[participant], "Already joined");
         isParticipant[participant] = true;
         participants.push(participant);
         emit ParticipantAdded(participant);
-
-        if (participants.length == 4) {
-            quizStarted = true;
-            emit QuizStarted();
-        }
     }
 
     function manualStartQuiz() external onlyOrganizer tournamentNotEnded {
