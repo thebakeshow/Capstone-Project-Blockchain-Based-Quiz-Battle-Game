@@ -143,10 +143,17 @@ export default function App() {
       updateLeaderboard();
     }, 10000);
 
-    return () => clearInterval(interval);
+    const quizInterval = setInterval(() => {
+      fetchQuizStarted();
+    }, 5000);
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(quizInterval);
+    };
   }, []);
 
-  async function fetchQuizStarted() {
+    async function fetchQuizStarted() {
     const provider = new ethers.providers.Web3Provider(getMetaMaskProvider());
     const contract = new ethers.Contract(contractAddress, abi, provider);
     const started = await contract.quizStarted();
@@ -278,6 +285,17 @@ export default function App() {
       setStatus("❌ Error declaring winners");
     }
   }
+
+      const prizeInterval = setInterval(() => {
+      fetchPrizePool();
+    }, 7000); // every 7 seconds
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(quizInterval);
+      clearInterval(prizeInterval);
+    };
+  }, []);
 
   return (
     <div style={{ padding: '2rem', background: '#111', color: '#fff', minHeight: '100vh', fontFamily: 'sans-serif' }}>
