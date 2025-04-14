@@ -159,9 +159,13 @@ export default function App() {
     const ended = await contract.tournamentEnded();
     setQuizStarted(started);
     setTournamentEnded(ended);
-    setShowQuiz(started && !ended);
-    if (ended && winners.length > 0) {
-      setShowWinnersScreen(true);
+    if (started && !ended) {
+      setShowQuiz(true);
+    } else if (ended) {
+      setShowQuiz(false);
+      if (winners.length > 0) {
+        setShowWinnersScreen(true);
+      }
     }
   }
 
