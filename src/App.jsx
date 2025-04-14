@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 
-const contractAddress = "0xC930216071978b23395A75793d10E807A36c7411"; // Replace if needed
+const contractAddress = "0xC930216071978b23395A75793d10E807A36c7411";
 const abi = [
   "function addParticipant(address participant) external",
   "function declareQuizWinners() external",
@@ -74,27 +74,26 @@ export default function App() {
 
   const organizerAddress = "0xca7490a6ea2d9ba9d8819a18ad37744c7d680f1e";
 
-  useEffect(() => {
-    init();
-    window.ethereum?.on("accountsChanged", () => {
-      init();
-    });
+  const connectWallet = async () => {
+    if (!window.ethereum) {
+      alert("MetaMask is not installed. Please install MetaMask to connect.");
+      return;
+    }
+    try {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const accounts = await provider.send("eth_requestAccounts", []);
+      const user = accounts[0];
+      setAccount(user);
+      await init(user);
+    } catch (error) {
+      console.error("Connection request failed:", error);
+    }
+  };
 
-    const interval = setInterval(() => {
-      refreshParticipants();
-      updateLeaderboard();
-    }, 10000); // refresh leaderboard every 10 seconds
-
-    return () => clearInterval(interval);
-  }, []);
-
-  async function init() {
-    if (!window.ethereum) return alert("Please install MetaMask");
+  const init = async (userAddress) => {
     const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const accounts = await provider.send("eth_requestAccounts", []);
-    const user = accounts[0];
+    const user = userAddress;
     setAccount(user);
-    // Only register as a participant if the connected address is not the organizer
     if(user.toLowerCase() !== organizerAddress.toLowerCase()){
       await register(user);
     }
@@ -103,7 +102,34 @@ export default function App() {
     await fetchQuizStarted();
     await fetchPrizePool();
     await updateLeaderboard();
-  }
+  };
+
+  useEffect(() => {
+    const checkConnection = async () => {
+      if (window.ethereum) {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+          if (accounts.length > 0) {
+            await init(accounts[0]);
+          }
+        } catch (error) {
+          console.error("Auto-connection check failed:", error);
+        }
+      }
+    };
+    checkConnection();
+
+    window.ethereum?.on("accountsChanged", () => {
+      checkConnection();
+    });
+
+    const interval = setInterval(() => {
+      refreshParticipants();
+      updateLeaderboard();
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   async function fetchQuizStarted() {
     const provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -241,6 +267,11 @@ export default function App() {
   return (
     <div style={{ padding: '2rem', background: '#111', color: '#fff', minHeight: '100vh', fontFamily: 'sans-serif' }}>
       <h1>Quiz Battle Game</h1>
+
+      {!account && (
+        <button onClick={connectWallet} style={{ marginBottom: '1rem' }}>🔐 Connect Wallet</button>
+      )}
+
       <p>🦊 Wallet: {account ? `${account.slice(0, 6)}...${account.slice(-4)}` : 'Not connected'}</p>
       <p>🏆 Prize Pool: {prizePool} ETH</p>
       <p>👥 {participants.length} Participants</p>
