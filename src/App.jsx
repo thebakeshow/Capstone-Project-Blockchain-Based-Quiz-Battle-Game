@@ -71,6 +71,7 @@ export default function App() {
   const [showQuiz, setShowQuiz] = useState(false);
   const [winners, setWinners] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
+  const [tournamentEnded, setTournamentEnded] = useState(false);
 
   const organizerAddress = "0xca7490a6ea2d9ba9d8819a18ad37744c7d680f1e";
 
@@ -153,7 +154,9 @@ export default function App() {
     const provider = new ethers.providers.Web3Provider(getMetaMaskProvider());
     const contract = new ethers.Contract(contractAddress, abi, provider);
     const started = await contract.quizStarted();
+    const ended = await contract.tournamentEnded();
     setQuizStarted(started);
+    setTournamentEnded(ended);
     setShowQuiz(started);
   }
 
@@ -246,7 +249,6 @@ export default function App() {
     const contract = new ethers.Contract(contractAddress, abi, signer);
     try {
       const tx = await contract.resetTournament();
-      setStatus("Resetting tournament...");
       await tx.wait();
       setStatus("✅ Tournament reset!");
       setQuizStarted(false);
@@ -254,6 +256,7 @@ export default function App() {
       setScore(null);
       setWinners([]);
       setShowQuiz(false);
+      setTournamentEnded(false);
       await refreshParticipants();
       await fetchPrizePool();
       await updateLeaderboard();
@@ -268,7 +271,6 @@ export default function App() {
     const contract = new ethers.Contract(contractAddress, abi, signer);
     try {
       const tx = await contract.declareQuizWinners();
-      setStatus("Declaring winners...");
       const receipt = await tx.wait();
       setStatus("✅ Winners declared!");
       const winnerEvents = receipt.events.filter(e => e.event === "WinnerDeclared");
@@ -306,7 +308,7 @@ export default function App() {
         </ol>
       )}
 
-      {showQuiz && quizStarted && (
+      {showQuiz && quizStarted && !tournamentEnded && (
         <>
           <h2>🎯 Quiz In Progress</h2>
           {questions.map(q => (
@@ -327,7 +329,7 @@ export default function App() {
         </>
       )}
 
-      {!showQuiz && winners.length > 0 && (
+      {tournamentEnded && winners.length > 0 && (
         <>
           <h2>🏁 Quiz Over – Winners</h2>
           <ul>
