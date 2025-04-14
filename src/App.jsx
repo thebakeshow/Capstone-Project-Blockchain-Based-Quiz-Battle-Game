@@ -21,10 +21,41 @@ const abi = [
 
 export default function App() {
   const [questions] = useState([
-    { id: 1, question: "What is the purpose of the TournamentPayout contract?", choices: ["Hold NFTs", "Manage payouts", "Stake ETH"] },
-    { id: 2, question: "What tool is used to deploy the contract?", choices: ["Hardhat", "Remix", "Truffle"] },
-    { id: 3, question: "What Chainlink service provides randomness?", choices: ["VRF", "Functions", "Data Feeds"] }
+    {
+      id: 1,
+      question: "What is one core goal of this project?",
+      choices: [
+        "Avoid smart contracts",
+        "Use banks for payouts",
+        "Transparent + Fast + Publicly Verifiable",
+      ],
+    },
+    {
+      id: 2,
+      question: "Which Ethereum testnet is used in this project?",
+      choices: ["Rinkeby", "Base Sepolia", "Goerli"],
+    },
+    {
+      id: 3,
+      question: "What tool automates winner declaration and payouts?",
+      choices: ["Remix", "Hardhat", "Chainlink Upkeep"],
+    },
+    {
+      id: 4,
+      question: "What ensures that once deployed, contract logic cannot be altered?",
+      choices: [
+        "Private keys",
+        "Immutable smart contract",
+        "IPFS",
+      ],
+    },
+    {
+      id: 5,
+      question: "Which Chainlink feature is planned for future question randomization?",
+      choices: ["Functions", "Data Feeds", "VRF"],
+    },
   ]);
+
 
   const [account, setAccount] = useState(null);
   const [participants, setParticipants] = useState([]);
